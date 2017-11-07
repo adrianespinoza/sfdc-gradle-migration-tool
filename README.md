@@ -6,53 +6,14 @@ Salesforce migration tool using **Gradle**<i class="icon-cog"></i>. This tool he
 
 ----------
 
-
-Project File Structure <i class="icon-folder-open"></i>
--------------
-
-<i class="icon-folder-open"></i>sfdc-gradle-migration-tool
-│   <i class="icon-file"></i>.gitignore  
-│   <i class="icon-file"></i>gradlew
-│   <i class="icon-file"></i>gradlew.bat
-│   <i class="icon-file"></i>settings.gradle
-│   <i class="icon-file"></i>README.md   
-│
-└───<i class="icon-folder-open"></i>gradle
-│   │
-│   └───<i class="icon-folder-open"></i>sfdc
-│	 │ 	└───<i class="icon-folder-open"></i>config
-│   │	│   │   <i class="icon-file"></i>build.gradle
-│   │	│  	│
-│	 │ 	│	└───<i class="icon-folder-open"></i>remove
-│   │	│	│   │   <i class="icon-file"></i>destructiveChanges.xml
-│   │	│	│   │   <i class="icon-file"></i>package.xml
-│	 │	   │	│
-│	 │ 	│	└───<i class="icon-folder-open"></i>unpackaged
-│   │	│	    │   <i class="icon-file"></i>package.xml
-│	 │	   │
-│	 │ 	└───<i class="icon-folder-open"></i>output
-│   │	│   └───<i class="icon-folder-open"></i>migration
-│   │	│   
-│   │   │   <i class="icon-file"></i>build.gradle
-│   │   │   <i class="icon-file"></i>build.properties
-│	│
-│	└───<i class="icon-folder-open"></i>util
-│   │   │   <i class="icon-file"></i>build.gradle
-│   │   
-│	└───<i class="icon-folder-open"></i>wrapper
-│       │   <i class="icon-file"></i>gradle-wrapper.jar
-│       │   <i class="icon-file"></i>gradle-wrapper.properties
-│   
-└───<i class="icon-folder-open"></i>lib
-    │   <i class="icon-file"></i>ant-salesforce.jar
-
-
-
 Prerequisites <i class="icon-cog"></i>
 -------------
 > - java v8.x.
 > - Gradle v4.3
 
+> **Note:**
+> 
+> - This project contains gradle wraper, if you do not need to install and configure gradle, you can directly execute the gradlew.bat from the main folder
 
 Configuration and execution <i class="icon-cog"></i>
 -------------
@@ -70,4 +31,3 @@ Is there also an option to revert the change made in the target environment by e
 > - In the **build.properties** file located in **.../gradle/sfdc/** enter the credentials for source and target environments.
 > - In the **destructiveChanges.xml** file located in **.../gradle/sfdc/config/remove/** define the items that will be removed form the target environment.
 > - From the main folder open a command prompt and execute this command: **gradle undeploy**.
-
