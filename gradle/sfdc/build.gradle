@@ -1,0 +1,159 @@
+import groovy.swing.SwingBuilder
+
+apply plugin: "java"
+apply plugin: "eclipse"
+apply plugin: "maven"
+
+defaultTasks "jar"
+
+// more defaults
+defaultTasks "deploy"
+
+def retrieveFolder = "output/retrieve"
+
+def props = new Properties()
+
+def username
+def password
+def serverurl
+def maxPoll
+
+def sourceUsername
+def sourcePassword
+def sourceServerurl
+
+def targetUsername
+def targetPassword
+def targetServerurl
+
+def migrationFolder
+def removeFolder
+
+def unpackagedFile
+
+repositories {
+    mavenCentral()
+}
+
+def dependenciesDir = "$buildDir/libs/lib"
+
+// this is the build number for automated builds
+def buildNumber = System.getenv()["BUILD_NUMBER"]
+if (buildNumber == null || buildNumber.isEmpty()) {
+    buildNumber = "handmade"
+}
+
+configurations {
+  salesforceAnt {description = "Salesforce Ant tasks"}
+}
+
+// define main dependencies to authenticate from the repos
+dependencies {
+    salesforceAnt files("../../lib/ant-salesforce.jar")
+}
+
+def cleanDirectory(path) {
+	delete path
+    ext.retrieveDir = file(path)
+    ext.retrieveDir.mkdirs()
+	println "The following folder was cleaned: " + path
+}
+
+def sfdcDeploy(username, password, serverurl, maxPoll, deployRoot) {
+	ant{
+        sf = deploy ( 
+			username: username,
+			password: password,
+			serverurl: serverurl,
+			maxPoll: maxPoll,
+			deployRoot: deployRoot
+		)
+    }
+}
+
+def sfdcRetrieve(usename, password, serverurl, retrieveTarget, packageNames) {
+	ant {
+        sf = retrieve ( 
+			username: usename,
+			password: password,
+			serverurl: serverurl,
+			retrieveTarget: retrieveTarget,
+			packageNames: packageNames
+		)
+    }
+}
+
+def sfdcRetrieveUnpackaged(username, password, serverurl, poll, retrieveTarget, unpackaged) {
+    ant{
+        sf = retrieve ( 
+			username: username,
+			password: password,
+			serverurl: serverurl,
+			maxPoll: poll,
+			retrieveTarget: retrieveTarget,
+			unpackaged: unpackaged
+		)
+    }
+}
+
+// copy external dependencies into lib directory
+copy {
+  into dependenciesDir
+  from configurations.runtime
+}
+
+// salesforce tasks
+task prepare << {
+    props.load(new FileInputStream("gradle/sfdc/build.properties"))	
+	maxPoll = props.getProperty("sfdc.maxPoll")	
+	sourceUsername = props.getProperty("sfdc.source.username")
+	sourcePassword = props.getProperty("sfdc.source.password")
+	sourceServerurl = props.getProperty("sfdc.source.serverurl")
+	
+	targetUsername = props.getProperty("sfdc.target.username")
+	targetPassword = props.getProperty("sfdc.target.password")
+	targetServerurl = props.getProperty("sfdc.target.serverurl")
+	
+	migrationFolder = props.getProperty("sfdc.folder.migration")
+	removeFolder = props.getProperty("sfdc.folder.remove")	
+	unpackagedFile = props.getProperty("sfdc.file.unpackaged")
+    
+    ext.sfJarPath = configurations.salesforceAnt.getAsPath()
+    ext.sfTasks = [ "deploy": "DeployTask",
+                    "retrieve": "RetrieveTask",
+                    "listMetadata": "ListMetadataTask",
+                    "describeMetadata": "DescribeMetadataTask" ];
+    sfTasks.each { name, clazz -> ant.taskdef (name:name, classname:"com.salesforce.ant.${clazz}", classpath: sfJarPath) }
+}
+
+task deploy(dependsOn: prepare) << {
+	sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
+}
+
+task undeploy (dependsOn: prepare) << {
+    sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
+}
+
+task retrievePackaged(dependsOn: prepare) << {
+    cleanDirectory(retrieveFolder)
+	sfdcRetrieve(username, password, serverurl, retrieveFolder, "MyPkg")
+	project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: " + retrieveFolder)
+}
+
+task retrieveUnpackaged (dependsOn: prepare) << {
+    cleanDirectory(migrationFolder)
+	sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, migrationFolder, unpackagedFile)
+	project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: "	+ migrationFolder)
+}
+
+task migrate (dependsOn: prepare) << {	
+	cleanDirectory(migrationFolder)
+	sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, migrationFolder, unpackagedFile)
+	project(":gradle:util").printMessage("info", sourceUsername + " - Data retrieved in the following folder: " + migrationFolder)
+	sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
+	project(":gradle:util").printMessage("info", targetUsername + " - Data deployed from the following folder: " + migrationFolder)
+}
+
+task revertMigration (dependsOn: prepare) << {
+	sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
+}
