@@ -29,6 +29,9 @@ def targetServerurl
 def migrationFolder
 def removeFolder
 
+def sourceFolder
+def targetFolder
+
 def unpackagedFile
 
 repositories {
@@ -119,6 +122,9 @@ task prepare {
 		removeFolder = props.getProperty("sfdc.folder.remove")	
 		unpackagedFile = props.getProperty("sfdc.file.unpackaged")
 		
+		sourceFolder = props.getProperty("sfdc.folder.source")
+		targetFolder = props.getProperty("sfdc.folder.target")
+		
 		ext.sfJarPath = configurations.salesforceAnt.getAsPath()
 		ext.sfTasks = [ "deploy": "DeployTask",
 						"retrieve": "RetrieveTask",
@@ -148,11 +154,19 @@ task retrievePackaged(dependsOn: prepare) {
 	}
 }
 
-task retrieveUnpackaged (dependsOn: prepare) {
+task sourceRetrieve (dependsOn: prepare) {
 	doLast {
-		cleanDirectory(migrationFolder)
-		sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, migrationFolder, unpackagedFile)
-		project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: "	+ migrationFolder)
+		cleanDirectory(sourceFolder)
+		sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, sourceFolder, unpackagedFile)
+		project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: "	+ sourceFolder)
+	}
+}
+
+task targetRetrieve (dependsOn: prepare) {
+	doLast {
+		cleanDirectory(targetFolder)
+		sfdcRetrieveUnpackaged(targetUsername, targetPassword, targetServerurl, maxPoll, targetFolder, unpackagedFile)
+		project(":gradle:util").printMessage("info", targetUsername + " - Data retrieved in the following folder: " + targetFolder)
 	}
 }
 
