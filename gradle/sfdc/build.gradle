@@ -56,46 +56,48 @@ dependencies {
 }
 
 def cleanDirectory(path) {
-	delete path
+ delete path
     ext.retrieveDir = file(path)
     ext.retrieveDir.mkdirs()
-	println "The following folder was cleaned: " + path
+ println "The following folder was cleaned: " + path
 }
 
 def sfdcDeploy(username, password, serverurl, maxPoll, deployRoot) {
-	ant{
-        sf = deploy ( 
-			username: username,
-			password: password,
-			serverurl: serverurl,
-			maxPoll: maxPoll,
-			deployRoot: deployRoot
-		)
+ ant{
+        sf = deploy (
+   username: username,
+   password: password,
+   serverurl: serverurl,
+   maxPoll: maxPoll,
+   deployRoot: deployRoot,
+   pollWaitMillis: 300000
+  )
     }
 }
 
 def sfdcRetrieve(usename, password, serverurl, retrieveTarget, packageNames) {
-	ant {
-        sf = retrieve ( 
-			username: usename,
-			password: password,
-			serverurl: serverurl,
-			retrieveTarget: retrieveTarget,
-			packageNames: packageNames
-		)
+ ant {
+        sf = retrieve (
+   username: usename,
+   password: password,
+   serverurl: serverurl,
+   retrieveTarget: retrieveTarget,
+   packageNames: packageNames
+  )
     }
 }
 
 def sfdcRetrieveUnpackaged(username, password, serverurl, poll, retrieveTarget, unpackaged) {
     ant{
-        sf = retrieve ( 
-			username: username,
-			password: password,
-			serverurl: serverurl,
-			maxPoll: poll,
-			retrieveTarget: retrieveTarget,
-			unpackaged: unpackaged
-		)
+        sf = retrieve (
+   username: username,
+   password: password,
+   serverurl: serverurl,
+   maxPoll: poll,
+   retrieveTarget: retrieveTarget,
+   unpackaged: unpackaged,
+   pollWaitMillis: 300000
+  )
     }
 }
 
@@ -107,81 +109,81 @@ copy {
 
 // salesforce tasks
 task prepare {
-	doLast {
-		props.load(new FileInputStream("gradle/sfdc/build.properties"))	
-		maxPoll = props.getProperty("sfdc.maxPoll")	
-		sourceUsername = props.getProperty("sfdc.source.username")
-		sourcePassword = props.getProperty("sfdc.source.password")
-		sourceServerurl = props.getProperty("sfdc.source.serverurl")
-		
-		targetUsername = props.getProperty("sfdc.target.username")
-		targetPassword = props.getProperty("sfdc.target.password")
-		targetServerurl = props.getProperty("sfdc.target.serverurl")
-		
-		migrationFolder = props.getProperty("sfdc.folder.migration")
-		removeFolder = props.getProperty("sfdc.folder.remove")	
-		unpackagedFile = props.getProperty("sfdc.file.unpackaged")
-		
-		sourceFolder = props.getProperty("sfdc.folder.source")
-		targetFolder = props.getProperty("sfdc.folder.target")
-		
-		ext.sfJarPath = configurations.salesforceAnt.getAsPath()
-		ext.sfTasks = [ "deploy": "DeployTask",
-						"retrieve": "RetrieveTask",
-						"listMetadata": "ListMetadataTask",
-						"describeMetadata": "DescribeMetadataTask" ];
-		sfTasks.each { name, clazz -> ant.taskdef (name:name, classname:"com.salesforce.ant.${clazz}", classpath: sfJarPath) }
-	}
+ doLast {
+  props.load(new FileInputStream("gradle/sfdc/build.properties"))
+  maxPoll = props.getProperty("sfdc.maxPoll")
+  sourceUsername = props.getProperty("sfdc.source.username")
+  sourcePassword = props.getProperty("sfdc.source.password")
+  sourceServerurl = props.getProperty("sfdc.source.serverurl")
+
+  targetUsername = props.getProperty("sfdc.target.username")
+  targetPassword = props.getProperty("sfdc.target.password")
+  targetServerurl = props.getProperty("sfdc.target.serverurl")
+
+  migrationFolder = props.getProperty("sfdc.folder.migration")
+  removeFolder = props.getProperty("sfdc.folder.remove")
+  unpackagedFile = props.getProperty("sfdc.file.unpackaged")
+
+  sourceFolder = props.getProperty("sfdc.folder.source")
+  targetFolder = props.getProperty("sfdc.folder.target")
+
+  ext.sfJarPath = configurations.salesforceAnt.getAsPath()
+  ext.sfTasks = [ "deploy": "DeployTask",
+      "retrieve": "RetrieveTask",
+      "listMetadata": "ListMetadataTask",
+      "describeMetadata": "DescribeMetadataTask" ];
+  sfTasks.each { name, clazz -> ant.taskdef (name:name, classname:"com.salesforce.ant.${clazz}", classpath: sfJarPath) }
+ }
 }
 
 task deploy(dependsOn: prepare) {
-	doLast {
-		sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
-	}
+ doLast {
+  sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
+ }
 }
 
 task undeploy (dependsOn: prepare) {
-	doLast {
-		sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
-	}
+ doLast {
+  sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
+ }
 }
 
 task retrievePackaged(dependsOn: prepare) {
-	doLast {
-		cleanDirectory(retrieveFolder)
-		sfdcRetrieve(username, password, serverurl, retrieveFolder, "MyPkg")
-		project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: " + retrieveFolder)
-	}
+ doLast {
+  cleanDirectory(retrieveFolder)
+  sfdcRetrieve(username, password, serverurl, retrieveFolder, "MyPkg")
+  project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: " + retrieveFolder)
+ }
 }
 
-task sourceRetrieve (dependsOn: prepare) {
-	doLast {
-		cleanDirectory(sourceFolder)
-		sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, sourceFolder, unpackagedFile)
-		project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: "	+ sourceFolder)
-	}
+task retrieveS (dependsOn: prepare) {
+ doLast {
+  cleanDirectory(sourceFolder)
+  sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, sourceFolder, unpackagedFile)
+  project(":gradle:util").printMessage("info", username + " - Data retrieved in in the following folder: " + sourceFolder)
+ }
 }
 
-task targetRetrieve (dependsOn: prepare) {
-	doLast {
-		cleanDirectory(targetFolder)
-		sfdcRetrieveUnpackaged(targetUsername, targetPassword, targetServerurl, maxPoll, targetFolder, unpackagedFile)
-		project(":gradle:util").printMessage("info", targetUsername + " - Data retrieved in the following folder: " + targetFolder)
-	}
+task retrieveT (dependsOn: prepare) {
+ doLast {
+  cleanDirectory(targetFolder)
+  sfdcRetrieveUnpackaged(targetUsername, targetPassword, targetServerurl, maxPoll, targetFolder, unpackagedFile)
+  project(":gradle:util").printMessage("info", targetUsername + " - Data retrieved in the following folder: " + targetFolder)
+ }
 }
 
 task migrate (dependsOn: prepare) {
-	doLast {	
-		cleanDirectory(migrationFolder)
-		sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, migrationFolder, unpackagedFile)
-		project(":gradle:util").printMessage("info", sourceUsername + " - Data retrieved in the following folder: " + migrationFolder)
-		sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
-		project(":gradle:util").printMessage("info", targetUsername + " - Data deployed from the following folder: " + migrationFolder)
-	}
+ doLast {
+  cleanDirectory(migrationFolder)
+  sfdcRetrieveUnpackaged(sourceUsername, sourcePassword, sourceServerurl, maxPoll, migrationFolder, unpackagedFile)
+  project(":gradle:util").printMessage("info", sourceUsername + " - Data retrieved in the following folder: " + migrationFolder)
+  sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, migrationFolder)
+  project(":gradle:util").printMessage("info", targetUsername + " - Data deployed from the following folder: " + migrationFolder)
+ }
 }
 
 task revertMigration (dependsOn: prepare) {
-	doLast {
-		sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
-	}
+ doLast {
+  sfdcDeploy(targetUsername, targetPassword, targetServerurl, maxPoll, removeFolder)
+ }
 }
